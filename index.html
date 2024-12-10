@@ -179,7 +179,7 @@
                     NV: 'Nevada',
                 },
                 sitename: 'After School Club',
-                clubs: clubs,
+                clubs: [], // Initialize as an empty array
                 cart: [],
             },
             methods: {
@@ -233,7 +233,24 @@
                     return this.sortedClubs.filter(club => club.title.toLowerCase().startsWith(this.searchQuery.toLowerCase()));
                 },
             },
+            created() {
+                // Fetch clubs from the backend using fetch
+                fetch('https://afterschoolclubbackend.onrender.com/products') // Replace with your backend API URL
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        this.clubs = data; // Assign fetched data to `clubs`
+                    })
+                    .catch(error => {
+                        console.error('Error fetching products:', error);
+                    });
+            },
         });
     </script>
+    
 </body>
 </html>
