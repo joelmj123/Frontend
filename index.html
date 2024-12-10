@@ -193,20 +193,85 @@
                 showCheckout() {
                     this.showProduct = false;
                 },
+                
                 submitForm() {
-                    alert('Order submitted!');
-                    this.cart = [];
-                    this.order = {
-                        firstName: '',
-                        lastName: '',
-                        address: '',
-                        city: '',
-                        zip: '',
-                        state: '',
-                        method: 'Home',
-                        gift: false,
-                    };
-                },
+    const orderData = {
+        firstName: this.order.firstName,
+        lastName: this.order.lastName,
+        address: this.order.address,
+        city: this.order.city,
+        zip: this.order.zip,
+        state: this.order.state,
+        method: this.order.method,
+        gift: this.order.gift,
+        cart: this.cart.map(productId => {
+            const product = this.clubs.find(club => club.id === productId);
+            return {
+                id: product.id,
+                title: product.title,
+                quantity: this.cartCount(productId),
+            };
+        }),
+    };
+
+    // Send order to the backend
+    fetch('https://afterschoolclubbackend.onrender.com/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(async (data) => {
+            alert('Order placed successfully!');
+            console.log('Order response:', data);
+
+            // Update inventory for each product in the cart
+            for (const productId of [...new Set(this.cart)]) {
+                const product = this.clubs.find(club => club.id === productId);
+                const newInventory = product.availableInventory - this.cartCount(productId);
+
+                try {
+                    const response = await fetch(`https://afterschoolclubbackend.onrender.com/products/${productId}/availability`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ availableInventory: newInventory }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Error updating inventory for product ${productId}`);
+                    }
+
+                    const result = await response.json();
+                    console.log('Inventory updated:', result);
+                } catch (error) {
+                    console.error(error.message);
+                }
+            }
+
+            // Reset cart and form
+            this.cart = [];
+            this.order = {
+                firstName: '',
+                lastName: '',
+                address: '',
+                city: '',
+                zip: '',
+                state: '',
+                method: 'Home',
+                gift: false,
+            };
+        })
+        .catch(error => {
+            console.error('Error placing order:', error);
+            alert('Error placing order. Please try again.');
+        });
+}
+,
                 canAddToCart(club) {
                     return club.availableInventory > this.cartCount(club.id);
                 },
